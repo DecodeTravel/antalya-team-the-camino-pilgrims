@@ -1,0 +1,147 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "TravelTrust API",
+    "version": "1.0.0",
+    "description": "API for managing connections and data access between business and private wallets in TravelTrust"
+  },
+  "paths": {
+    "/createDRP": {
+      "post": {
+        "summary": "Checks or creates a Connection Key",
+        "description": "This endpoint verifies if a connection exists between `privateWalletId` and `businessWalletId`. If a connection is already established, it returns a Connection Hash. If no connection exists, the owner of the `privateWalletId` is notified of the request and asked to confirm or deny the connection, enabling a controlled and secure data-sharing process.",
+        "operationId": "createDRP",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "initiatorWalletId": {
+                    "type": "string",
+                    "description": "The unique identifier of the wallet initiating the data request or action. This wallet ID is used to log the time and identity of the party requesting the Data Read Permission (DRP), enabling traceability and accountability within the Travel Trust system."
+                  },
+                  "readerWalletId": {
+                    "type": "string",
+                    "description": "The unique identifier of the wallet that is intended to receive read access. This wallet ID represents the party requesting permission to view specific data within the Travel-Trust system."
+                  },
+                  "dataWalletId": {
+                    "type": "string",
+                    "description": "The unique identifier of the wallet holding the data requested for read access. If no prior agreement exists between the readerWalletId and dataWalletId, the holder of the dataWalletId is notified of the request and can choose to approve or deny access."
+                  }
+                },
+                "required": ["initiatorWalletId", "readerWalletId", "dataWalletId"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Connection exists. Data read permission Hash returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "drpHash": {
+                      "type": "string",
+                      "description": "The Data Read Permission Hash (drp) is a security mechanism designed to control and restrict access to sensitive data. It acts as a unique access key, granted to authorized entities (such as specific reader wallets) to read particular data. The drp is paired with the readerWalletId, meaning that both values must match correctly to unlock and decrypt the information. This ensures that only authorized parties with both the drp and the correct wallet ID can access the data, thereby protecting it from unauthorized access and maintaining privacy and control over sensitive information."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Connection does not exist yet. The owner of `privateWalletId` has been notified.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "The owner of the private wallet has been notified for connection confirmation."
+                    },
+                    "status": {
+                      "type": "string",
+                      "example": "Pending Confirmation"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request. Missing or incorrect parameters."
+          },
+          "500": {
+            "description": "Internal server error. Connection could not be checked or created."
+          }
+        }
+      }
+    },
+    "/readData": {
+      "post": {
+        "summary": "Reads allowed data via the Connection Key",
+        "description": "Uses the `connectionKey` to read all data allowed in TravelTrust. TravelTrust also notifies the owner of the `privateWalletId` that their data has been accessed.",
+        "operationId": "readData",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "readerWalletId": {
+                    "type": "string",
+                    "description": "The unique identifier of the wallet that is requesting data access. This ID serves as proof of authorization, demonstrating that the requestor has the permission to read the specified data."
+                  },
+                  "drpHash": {
+                    "type": "string",
+                    "description": "The Data Read Permission Hash, which specifies the exact data set to be read. This hash acts as a unique key to the data, indicating the specific information that the readerWalletId is requesting access to."
+                  }
+                },
+                "required": ["readerWalletId","drpHash"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Data successfully read and returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "description": "All data allowed in TravelTrust for the owner of the `privateWalletId`.",
+                      "additionalProperties": true
+                    },
+                    "notification": {
+                      "type": "string",
+                      "example": "Owner of the private wallet has been notified of the data access."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid Connection Key or missing parameters."
+          },
+          "401": {
+            "description": "Unauthorized. No access to the requested data."
+          },
+          "500": {
+            "description": "Internal server error. Data could not be read."
+          }
+        }
+      }
+    }
+  },
+  "components": {}
+}
